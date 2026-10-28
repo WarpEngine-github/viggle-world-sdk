@@ -112,7 +112,8 @@ export class ViggleSceneClient {
     }
     if (panorama === void 0) {
       if (input.prompt === void 0 && !referenceImages?.length) throw invalid('provide a prompt, referenceImages or a panorama');
-      if (input.prompt !== void 0) checkPrompt(input.prompt);
+      // Beside reference images a blank prompt is no prompt, as the API takes it.
+      if (input.prompt !== void 0 && (!referenceImages?.length || input.prompt.trim())) checkPrompt(input.prompt);
       checkQuality(input.quality);
       if ((referenceImages?.length ?? 0) > LIMITS.referenceImages) {
         throw invalid(`referenceImages must be a list of at most ${LIMITS.referenceImages} URLs`);

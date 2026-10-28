@@ -287,7 +287,7 @@ await explorer.playAction('https://…/wave.glb', { loop: false });
 | 字段 | 规则 |
 |---|---|
 | `sessionId` | 1–128 位，只能用字母、数字、`_`、`-` |
-| `prompt` / `referenceImages` | 至少传一个。`prompt` 传了就要 1–1000 字，不能全是空白 |
+| `prompt` / `referenceImages` | 至少传一个。`prompt` 最多 1000 字；没有参考图时不能全是空白，有参考图时空白等于没传 |
 | `quality` | `low` / `medium` / `high`。服务端不接受 `fast` |
 | `referenceImages` | 最多 8 张，URL 必须是 http(s) 且不带账号密码 |
 | `panorama` | 不能和 `prompt` / `quality` / `referenceImages` 同时传 |
