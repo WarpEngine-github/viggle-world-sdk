@@ -1,0 +1,5 @@
+# Settings only - this is a single package, not a workspace of several.
+# Same choice as P.I.N.O.C.: esbuild runs from its prebuilt platform package,
+# so its install script is not needed.
+allowBuilds:
+  esbuild: false

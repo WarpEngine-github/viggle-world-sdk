@@ -1,0 +1,6 @@
+node_modules
+dist
+*.local
+*.tgz
+.idea
+.DS_Store

@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": "src",
+    "types": [],
+    // The engine ships as TypeScript source outside this package, which a
+    // rootDir'd declaration build cannot compile. Its types never reach this
+    // package's public API, so the build reads a stub in its place and only
+    // emits: `pnpm typecheck` checks the source against the real engine.
+    "noCheck": true,
+    "paths": {
+      "@viggle/splat-engine": ["./build/splat-engine-shim.d.ts"],
+      "@viggle/splat-engine/*": ["./build/splat-engine-shim.d.ts"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "example"]
+}

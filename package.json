@@ -1,0 +1,109 @@
+{
+  "name": "@viggle/scene-sdk",
+  "version": "0.4.0",
+  "description": "Viggle Scene API SDK: generate a Gaussian-splat 3D scene from a prompt or a panorama, view it, expand it where the camera stands, and walk a character through it. Framework-free client, React bindings, WebGL viewer and explorer.",
+  "keywords": [
+    "3d",
+    "character",
+    "gaussian-splatting",
+    "playcanvas",
+    "react",
+    "scene",
+    "splat",
+    "third-person",
+    "viggle"
+  ],
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./react": {
+      "types": "./dist/types/react/index.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./viewer": {
+      "types": "./dist/types/viewer/index.d.ts",
+      "import": "./dist/viewer.js"
+    },
+    "./walk": {
+      "types": "./dist/types/walk/index.d.ts",
+      "import": "./dist/walk.js"
+    },
+    "./explorer": {
+      "types": "./dist/types/explorer/index.d.ts",
+      "import": "./dist/explorer.js"
+    },
+    "./lighting": {
+      "types": "./dist/types/lighting/index.d.ts",
+      "import": "./dist/lighting.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "./dist/types/react/index.d.ts"
+      ],
+      "viewer": [
+        "./dist/types/viewer/index.d.ts"
+      ],
+      "walk": [
+        "./dist/types/walk/index.d.ts"
+      ],
+      "explorer": [
+        "./dist/types/explorer/index.d.ts"
+      ],
+      "lighting": [
+        "./dist/types/lighting/index.d.ts"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "vite build && vite build --mode cjs && tsc -p tsconfig.build.json && node build/cjs-types.mjs && node build/prune-types.mjs",
+    "build:release": "VIGGLE_RELEASE=1 pnpm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "example": "vite --config example/vite.config.ts"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@viggle/splat-engine": "link:../P.I.N.O.C./engine",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tsx": "4.23.15",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.4"
+  },
+  "packageManager": "pnpm@11.0.9"
+}
