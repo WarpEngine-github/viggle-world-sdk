@@ -198,13 +198,15 @@ export function SceneStudio({
   const running = gen.busy ? gen : expand.busy ? expand : rebuild.busy ? rebuild : null;
   const elapsed = useElapsed(running?.startedAt ?? null);
 
+  // A prompt, reference images or both: either one is enough.
+  const canGenerate = !busy && (!!prompt.trim() || references.items.length > 0 || !!generateInput?.referenceImages?.length);
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (!canGenerate) return;
     const text = prompt.trim();
-    if (!text || busy) return;
     const picked = references.items.map((r) => r.file);
     const referenceImages = [...(generateInput?.referenceImages ?? []), ...picked];
-    void gen.generate({ ...generateInput, prompt: text, ...(referenceImages.length && { referenceImages }) });
+    void gen.generate({ ...generateInput, ...(text && { prompt: text }), ...(referenceImages.length && { referenceImages }) });
   };
   const pickReferences = (e: ChangeEvent<HTMLInputElement>) => {
     const files = [...(e.target.files ?? [])];
@@ -440,8 +442,8 @@ export function SceneStudio({
               />
               <button
                 type="submit"
-                {...part('generateButton', css.generate, {}, busy || !prompt.trim() ? css.disabled : null)}
-                disabled={busy || !prompt.trim()}
+                {...part('generateButton', css.generate, {}, canGenerate ? null : css.disabled)}
+                disabled={!canGenerate}
               >
                 {gen.busy ? labels.generating : labels.generate}
                 {generateCredits != null && !gen.busy && <span {...part('cost', css.cost)}>{generateCredits} cr</span>}

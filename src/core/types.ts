@@ -143,14 +143,14 @@ export interface Base64Image {
  */
 export type ImageInput = string | Blob | Base64Image;
 
-/** 创建场景 - `POST /v1/scenes/pano`. A prompt (with optional reference images) OR a panorama. */
+/** 创建场景 - `POST /v1/scenes/pano`. A prompt, reference images or both - OR a panorama. */
 export interface CreateSceneInput {
   /** Defaults to a fresh random id. 1-128 of `[A-Za-z0-9_-]`. */
   sessionId?: string;
-  /** 1 to 1000 characters. */
+  /** 1 to 1000 characters. Optional when `referenceImages` has at least one. */
   prompt?: string;
   /**
-   * Up to 8, in order. JPEG / PNG / WebP, 36 MP each, 50 MiB in all. All URLs
+   * Up to 8, in order; enough on their own without a `prompt`. JPEG / PNG / WebP, 36 MP each, 50 MiB in all. All URLs
    * (sent as JSON) or all files (sent as multipart), not a mix.
    */
   referenceImages?: ImageInput[];

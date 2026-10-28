@@ -116,6 +116,7 @@ const empty = await viewer.measureView();                  // 当前视角有多
 - **用户自己选**：点输入栏的 Images 按钮选参考图，生成成功后会自动清空。如果不想让用户选，传 `hideReferences` 隐藏这个按钮。
 - **代码里固定附带**：通过 `generateInput={{ referenceImages: [...] }}` 传入，每次生成都会带上。可以是 URL、data URL、`{ base64, mimeType }` 或 `File`，和用户选的图合在一起最多 8 张。
 - **不用 `<SceneStudio>`**：直接调用 `gen.generate({ prompt, referenceImages })` 或 `client.generateScene({ prompt, referenceImages })`。
+- **文字和图片有一个就行**：可以只写 prompt，可以只传参考图，也可以两个都传。Studio 里只选了图、没打字时，Generate 按钮也能点。
 
 `<SceneStudio>` 既可以受控使用（`scene` 加 `onSceneChange`），也可以非受控使用（`defaultScene`）。
 
@@ -286,7 +287,7 @@ await explorer.playAction('https://…/wave.glb', { loop: false });
 | 字段 | 规则 |
 |---|---|
 | `sessionId` | 1–128 位，只能用字母、数字、`_`、`-` |
-| `prompt` | 1–1000 字，不能全是空白 |
+| `prompt` / `referenceImages` | 至少传一个。`prompt` 传了就要 1–1000 字，不能全是空白 |
 | `quality` | `low` / `medium` / `high`。服务端不接受 `fast` |
 | `referenceImages` | 最多 8 张，URL 必须是 http(s) 且不带账号密码 |
 | `panorama` | 不能和 `prompt` / `quality` / `referenceImages` 同时传 |

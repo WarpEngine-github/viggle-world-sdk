@@ -103,16 +103,16 @@ export class ViggleSceneClient {
 
   // ── The five endpoints ────────────────────────────────────────────────────
 
-  /** 创建场景: from a prompt (and optional reference images), or from a finished panorama. */
+  /** 创建场景: from a prompt, reference images or both, or from a finished panorama. */
   createSceneTask(input: CreateSceneInput, opts?: RequestOptions): Promise<SceneTask> {
     const { referenceImages, panorama, ...rest } = input;
     const body = { ...rest, sessionId: checkSessionId(input.sessionId ?? newSessionId()) };
     if (panorama && (input.prompt !== void 0 || input.quality !== void 0 || referenceImages?.length)) {
-      throw invalid('use panoramaUri or a panorama file, or prompt with optional referenceImages and quality, not both');
+      throw invalid('use panoramaUri or a panorama file, or prompt and/or referenceImages with quality, not both');
     }
     if (panorama === void 0) {
-      if (input.prompt === void 0) throw invalid('provide a prompt or a panorama');
-      checkPrompt(input.prompt);
+      if (input.prompt === void 0 && !referenceImages?.length) throw invalid('provide a prompt, referenceImages or a panorama');
+      if (input.prompt !== void 0) checkPrompt(input.prompt);
       checkQuality(input.quality);
       if ((referenceImages?.length ?? 0) > LIMITS.referenceImages) {
         throw invalid(`referenceImages must be a list of at most ${LIMITS.referenceImages} URLs`);

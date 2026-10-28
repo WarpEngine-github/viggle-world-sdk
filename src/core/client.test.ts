@@ -78,6 +78,12 @@ test('a session id is minted when none is given', async () => {
   assert.equal(calls[0]!.auth, null);
 });
 
+test('reference images alone are enough: no prompt is sent', async () => {
+  const { calls, fetchImpl } = scripted([[200, task('t', 'processing')]]);
+  await new ViggleSceneClient({ fetch: fetchImpl }).createSceneTask({ sessionId: 's1', referenceImages: ['https://a/b.jpg'] });
+  assert.deepEqual(calls[0]!.body, { sessionId: 's1', referenceImages: ['https://a/b.jpg'] });
+});
+
 test('a panorama file goes multipart, with the pose as a JSON field', async () => {
   const { calls, fetchImpl } = scripted([[200, task('t', 'processing', { operation: 'custom-pano' })]]);
   const client = new ViggleSceneClient({ apiKey: KEY, baseUrl: 'https://proxy.test/', fetch: fetchImpl });
@@ -254,7 +260,10 @@ test('requests the API would refuse are refused locally, with its code and words
   const I = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
   const refused = (fn: () => unknown, message: RegExp) => assert.throws(fn, (e: unknown) =>
     e instanceof SceneApiError && e.status === 400 && e.code === 'INVALID_REQUEST' && message.test(e.message));
+  refused(() => client.createSceneTask({}), /provide a prompt, referenceImages or a panorama/);
+  refused(() => client.createSceneTask({ referenceImages: [] }), /provide a prompt, referenceImages or a panorama/);
   refused(() => client.createSceneTask({ prompt: '   ' }), /prompt must be 1-1000/);
+  refused(() => client.createSceneTask({ prompt: '   ', referenceImages: ['https://a/b.jpg'] }), /prompt must be 1-1000/);
   refused(() => client.createSceneTask({ prompt: 'a'.repeat(1001) }), /prompt must be 1-1000/);
   refused(() => client.createSceneTask({ prompt: 'x', quality: 'fast' as never }), /quality must be low, medium or high/);
   refused(() => client.createSceneTask({ prompt: 'x', referenceImages: ['ftp://a/b.jpg'] }), /referenceImages\[0\] must be an http\(s\) URL/);
