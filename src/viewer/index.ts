@@ -5,4 +5,6 @@
  * decoder workers. Browser only.
  */
 export { SceneRenderer } from './renderer.js';
-export type { LoadProgress, SceneRendererOptions } from './renderer.js';
+export type { FindGapsOptions, FlyToOptions, LoadProgress, SceneGap, SceneRendererOptions } from './renderer.js';
+export { gapCandidates, horizontalFov, pickGaps, wallDistances } from './gaps.js';
+export type { GapCandidate, GapSearchOptions } from './gaps.js';

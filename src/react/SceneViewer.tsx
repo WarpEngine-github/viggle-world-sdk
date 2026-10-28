@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import type { ScenePose, ViggleScene } from '../core/types.js';
-import type { LoadProgress, SceneRenderer, SceneRendererOptions } from '../viewer/renderer.js';
+import type { FindGapsOptions, FlyToOptions, LoadProgress, SceneGap, SceneRenderer, SceneRendererOptions } from '../viewer/renderer.js';
 
 export interface SceneViewerHandle {
   /** Where the camera stands, in the pose frame - pass it to `expand`. Null before the scene shows. */
@@ -10,6 +10,12 @@ export interface SceneViewerHandle {
   /** Cut the camera to a pose. */
   setPose(pose: ScenePose): void;
   resetCamera(): void;
+  /** Glide the camera to a pose. Resolves on arrival. */
+  flyTo(pose: ScenePose, opts?: FlyToOptions): Promise<void>;
+  /** The views with gaps in them, emptiest first, measured offscreen. See `SceneRenderer.findGaps`. */
+  findGaps(opts?: FindGapsOptions): Promise<SceneGap[]>;
+  /** The share of a view (default: the camera's) that nothing covers, 0..1. */
+  measureView(pose?: ScenePose): Promise<number>;
   /** The camera's vertical field of view, degrees: send it with an expand. */
   readonly fov: number;
   /** The underlying renderer, once it exists. */
@@ -112,6 +118,9 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(funct
     getPose: () => renderer?.getPose() ?? null,
     setPose: (pose) => renderer?.setPose(pose),
     resetCamera: () => renderer?.resetCamera(),
+    flyTo: (pose, opts) => renderer?.flyTo(pose, opts) ?? Promise.resolve(),
+    findGaps: (opts) => (renderer ? renderer.findGaps(opts) : Promise.reject(new Error('The viewer is not ready.'))),
+    measureView: (pose) => (renderer ? renderer.measureView(pose) : Promise.reject(new Error('The viewer is not ready.'))),
     get fov() { return renderer?.fov ?? fov; },
     get renderer() { return renderer; },
   }), [renderer, fov]);

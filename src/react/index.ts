@@ -11,6 +11,7 @@ export { useSceneExpand, useSceneGeneration, useSceneRebuild } from './hooks.js'
 export type { JobPhase, JobState } from './useJob.js';
 export { SceneViewer } from './SceneViewer.js';
 export type { SceneViewerHandle, SceneViewerProps } from './SceneViewer.js';
+export type { FindGapsOptions, FlyToOptions, SceneGap } from '../viewer/renderer.js';
 export { SceneStudio } from './SceneStudio.js';
 export type { SceneStudioClassNames, SceneStudioLabels, SceneStudioProps, SceneStudioToolbarContext } from './SceneStudio.js';
 export { SceneExplorerView } from './SceneExplorerView.js';

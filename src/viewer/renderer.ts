@@ -1,7 +1,10 @@
-import { Environment, FlyControls, Scene } from '@viggle/splat-engine';
+import { createSceneProbe, Environment, FlyControls, Scene } from '@viggle/splat-engine';
 
 import { fileToWorld, worldToFile, yawPitchOf } from '../core/pose.js';
 import type { ScenePose } from '../core/types.js';
+import { DEFAULT_CAPTURE_HEIGHT, FALLBACK_SCENE_SCALE, isUprightFile } from '../walk/placement.js';
+import type { GapSearchOptions } from './gaps.js';
+import { gapCandidates, horizontalFov, pickGaps, wallDistances } from './gaps.js';
 
 export interface SceneRendererOptions {
   /** Clear colour, 0..1 floats. Default near-black. */
@@ -11,6 +14,35 @@ export interface SceneRendererOptions {
   /** Fly speed in scene units per second. Default 1 (a unit is a few metres). */
   flySpeed?: number;
 }
+
+export interface FindGapsOptions extends GapSearchOptions {
+  /** Vertical field of view the fills will be generated at, degrees. Default the viewer's. */
+  fov?: number;
+  /** Also render a picture of each gap found (`SceneGap.preview`). Default false. */
+  previews?: boolean;
+  /** Called after each candidate view is measured. */
+  onProgress?: (p: { measured: number; total: number }) => void;
+  signal?: AbortSignal;
+}
+
+/** A view of the scene with a gap in it: somewhere a fill would add what the capture point could not see. */
+export interface SceneGap {
+  /** Where to stand and look, in the pose frame: `flyTo` it, or `expand` from it to fill the gap. */
+  pose: ScenePose;
+  /** Share of the view nothing covers, 0..1. */
+  holeFraction: number;
+  /** `data:image/jpeg;base64,...` of the view, the gaps black. With `previews`. */
+  preview?: string;
+}
+
+export interface FlyToOptions {
+  /** Default 900. 0 cuts. */
+  durationMs?: number;
+}
+
+/** Probe frames are 16:9: the shape of a generated view. */
+const PROBE_SIZE = { width: 128, height: 72 } as const;
+const PREVIEW_SIZE = { width: 384, height: 216 } as const;
 
 export interface LoadProgress {
   /** Files of this load that have landed. */
@@ -33,7 +65,11 @@ export interface LoadProgress {
  */
 export class SceneRenderer {
   private loadTicket = 0;
+  private flyTicket = 0;
   private environments: Environment[] = [];
+  /** The first file's name, which says which way up it is stored. */
+  private filename = '';
+  private height: number | null = null;
   private destroyed = false;
 
   private constructor(
@@ -102,6 +138,8 @@ export class SceneRenderer {
     const first = await loadOne(urls[0]!, 0);
     if (!first) return;
     landed.push(first);
+    this.filename = filenameOf(urls[0]!, 0);
+    this.height = null;
     // The old version goes only once the new one can stand in for it.
     this.replace(landed);
     onProgress?.({ loaded: 1, total });
@@ -127,6 +165,11 @@ export class SceneRenderer {
 
   /** Put the camera at a pose given in the scene file's frame (an expand step's `fillView`, a candidate). */
   setPose(pose: ScenePose): void {
+    this.flyTicket++;
+    this.place(pose);
+  }
+
+  private place(pose: ScenePose): void {
     if (this.destroyed) return;
     const [x, y, z] = fileToWorld(pose.position);
     this.scene.cameraEntity.setPosition(x, y, z);
@@ -139,6 +182,110 @@ export class SceneRenderer {
     this.setPose({ position: [0, 0, 0], forward: [0, 0, 1] });
   }
 
+  /**
+   * Find the views with gaps in them, emptiest first.
+   *
+   * Candidate cameras ring the capture point inside the room, looking back at
+   * it, and each is rendered offscreen (nothing on screen moves) and measured:
+   * the share of the frame no splat covers. Nothing is spent - pass a gap's
+   * `pose` to `flyTo` to look at it, and to an expand to fill it.
+   *
+   * About 25 views by default, a few seconds on a scene-sized cloud. Rejects
+   * when there is no scene, when `signal` aborts, or when another scene loads
+   * meanwhile.
+   */
+  async findGaps(opts: FindGapsOptions = {}): Promise<SceneGap[]> {
+    const env = this.environments[0];
+    if (this.destroyed || !env) throw new Error('No scene is loaded.');
+    const ticket = this.loadTicket;
+    const height = this.captureHeight(env);
+    const candidates = gapCandidates(height, wallDistances(env.sampleWorldPoints(40_000), height), opts);
+    const probe = createSceneProbe(this.scene, {
+      ...PROBE_SIZE,
+      fovDeg: horizontalFov(opts.fov ?? this.fov, PROBE_SIZE.width / PROBE_SIZE.height),
+    });
+    const check = () => {
+      if (opts.signal?.aborted) throw opts.signal.reason ?? new DOMException('Aborted', 'AbortError');
+      if (this.destroyed || ticket !== this.loadTicket) throw new Error('The scene changed while it was being searched.');
+    };
+    try {
+      const measured: { candidate: (typeof candidates)[number]; holeFraction: number }[] = [];
+      for (const candidate of candidates) {
+        check();
+        const r = await probe.probe({ position: candidate.position, yawDeg: candidate.yawDeg, pitchDeg: candidate.pitchDeg });
+        measured.push({ candidate, holeFraction: r.holeFraction });
+        opts.onProgress?.({ measured: measured.length, total: candidates.length });
+      }
+      const gaps: SceneGap[] = [];
+      for (const { candidate: c, holeFraction } of pickGaps(measured, opts)) {
+        check();
+        const gap: SceneGap = { pose: { position: worldToFile(c.position), forward: worldToFile(c.forward) }, holeFraction };
+        if (opts.previews) {
+          gap.preview = (await probe.capture({ position: c.position, yawDeg: c.yawDeg, pitchDeg: c.pitchDeg }, PREVIEW_SIZE)).dataUrl;
+        }
+        gaps.push(gap);
+      }
+      return gaps;
+    } finally {
+      probe.destroy();
+    }
+  }
+
+  /** The share of a view (default: the camera's) that nothing covers, 0..1, measured offscreen. */
+  async measureView(pose?: ScenePose, fov = this.fov): Promise<number> {
+    const at = pose ?? this.getPose();
+    if (!at) throw new Error('No scene is loaded.');
+    const { yaw, pitch } = yawPitchOf(fileToWorld(at.forward));
+    const probe = createSceneProbe(this.scene, { ...PROBE_SIZE, fovDeg: horizontalFov(fov, PROBE_SIZE.width / PROBE_SIZE.height) });
+    try {
+      return (await probe.probe({ position: fileToWorld(at.position), yawDeg: yaw, pitchDeg: pitch })).holeFraction;
+    } finally {
+      probe.destroy();
+    }
+  }
+
+  /**
+   * Glide the camera to a pose in the pose frame. Resolves on arrival, or
+   * when a newer `flyTo` or `setPose` takes over.
+   */
+  flyTo(pose: ScenePose, opts: FlyToOptions = {}): Promise<void> {
+    const ticket = ++this.flyTicket;
+    const duration = Math.max(0, opts.durationMs ?? 900);
+    if (this.destroyed) return Promise.resolve();
+    if (duration === 0) {
+      this.place(pose);
+      return Promise.resolve();
+    }
+    const cam = this.scene.cameraEntity;
+    const p = cam.getPosition();
+    const from = { x: p.x, y: p.y, z: p.z, yaw: this.fly.yaw, pitch: this.fly.pitch };
+    const [tx, ty, tz] = fileToWorld(pose.position);
+    const to = yawPitchOf(fileToWorld(pose.forward));
+    // The short way round.
+    const dyaw = ((((to.yaw - from.yaw) % 360) + 540) % 360) - 180;
+    const app = this.scene.app;
+    return new Promise((resolve) => {
+      let t = 0;
+      const step = (dt: number) => {
+        if (this.destroyed || ticket !== this.flyTicket) {
+          app.off('update', step);
+          resolve();
+          return;
+        }
+        t += dt * 1000;
+        const k = Math.min(1, t / duration);
+        const e = k * k * (3 - 2 * k);
+        cam.setPosition(from.x + (tx - from.x) * e, from.y + (ty - from.y) * e, from.z + (tz - from.z) * e);
+        this.fly.setOrientation(from.yaw + dyaw * e, from.pitch + (to.pitch - from.pitch) * e);
+        if (k >= 1) {
+          app.off('update', step);
+          resolve();
+        }
+      };
+      app.on('update', step);
+    });
+  }
+
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -149,10 +296,32 @@ export class SceneRenderer {
     this.scene.destroy();
   }
 
+  /** The capture point's height over the floor, file units: what the gap search's rings are measured in. */
+  private captureHeight(env: Environment): number {
+    if (this.height === null) {
+      const depth = env.probeGroundDepth(isUprightFile(this.filename) ? -1 : 1)?.depth;
+      this.height = depth && depth > 0 && Number.isFinite(depth) ? depth : lowestLayer(env.sampleWorldPoints(20_000));
+    }
+    return this.height;
+  }
+
   private replace(next: Environment[]): void {
     for (const env of this.environments) env.destroy();
     this.environments = next;
   }
+}
+
+/**
+ * How far below the capture point the lowest splats are (5th percentile of
+ * world Y): the floor, when the ground probe finds none. A typical capture
+ * height when that is not below the capture point either.
+ */
+function lowestLayer(points: Float32Array): number {
+  const ys: number[] = [];
+  for (let k = 1; k < points.length; k += 3) ys.push(points[k]!);
+  ys.sort((a, b) => a - b);
+  const low = ys[Math.floor(ys.length * 0.05)];
+  return low !== undefined && low < 0 ? -low : DEFAULT_CAPTURE_HEIGHT / FALLBACK_SCENE_SCALE;
 }
 
 function filenameOf(url: string, i: number): string {

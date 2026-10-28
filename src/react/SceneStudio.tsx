@@ -1,9 +1,10 @@
 import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { withoutBatch } from '../core/client.js';
 import { SceneApiError } from '../core/errors.js';
 import type { CreateSceneInput, SceneVersion, ViggleScene } from '../core/types.js';
+import type { SceneGap } from '../viewer/renderer.js';
 import { useSceneExpand, useSceneGeneration, useSceneRebuild } from './hooks.js';
 import type { SceneViewerHandle } from './SceneViewer.js';
 import { SceneViewer } from './SceneViewer.js';
@@ -30,6 +31,16 @@ export interface SceneStudioLabels {
   references: string;
   referencesHint: string;
   removeReference: string;
+  findGaps: string;
+  findGapsHint: string;
+  findingGaps: string;
+  autoFill: string;
+  autoFillHint: string;
+  noGaps: string;
+  gap: string;
+  empty: string;
+  previousGap: string;
+  nextGap: string;
 }
 
 const DEFAULT_LABELS: SceneStudioLabels = {
@@ -52,6 +63,16 @@ const DEFAULT_LABELS: SceneStudioLabels = {
   references: 'Images',
   referencesHint: 'Reference images sent with the prompt (up to 8)',
   removeReference: 'Remove image',
+  findGaps: 'Find gaps',
+  findGapsHint: 'Look for the views with holes in them and fly to the worst (free)',
+  findingGaps: 'Looking for gaps',
+  autoFill: 'Auto fill',
+  autoFillHint: 'Find the worst gap, fly there and fill it',
+  noGaps: 'No gaps found',
+  gap: 'Gap',
+  empty: 'empty',
+  previousGap: 'Previous gap',
+  nextGap: 'Next gap',
 };
 
 /** The API takes at most this many reference images with a prompt. */
@@ -59,7 +80,7 @@ const MAX_REFERENCES = 8;
 
 /** The parts of `<SceneStudio>`. Each carries `data-viggle-part="<name>"` too, for plain CSS. */
 export type SceneStudioPart =
-  | 'root' | 'versions' | 'versionButton' | 'versionLabel' | 'expand' | 'cost'
+  | 'root' | 'versions' | 'versionButton' | 'versionLabel' | 'expand' | 'gapsButton' | 'autoFillButton' | 'gaps' | 'cost'
   | 'status' | 'error' | 'promptBar' | 'input' | 'panoramaButton' | 'generateButton'
   | 'referencesButton' | 'references' | 'referenceThumb' | 'referenceRemove';
 
@@ -91,6 +112,8 @@ export interface SceneStudioProps {
   hidePanorama?: boolean;
   /** Hide the Images button (reference images picked by the user). */
   hideReferences?: boolean;
+  /** Hide Find gaps and Auto fill. */
+  hideGaps?: boolean;
   /**
    * Your own controls top-right, beside Fill view - export, "use this
    * scene", share. Called with the scene and the version on screen.
@@ -130,7 +153,7 @@ export interface SceneStudioProps {
  *   --viggle-scene-font     overlay font           500 13px/1.25 system-ui, sans-serif
  */
 export function SceneStudio({
-  scene: controlled, defaultScene, onSceneChange, onError, generateInput, hidePrompt, hidePanorama, hideReferences, toolbar,
+  scene: controlled, defaultScene, onSceneChange, onError, generateInput, hidePrompt, hidePanorama, hideReferences, hideGaps, toolbar,
   expandCredits, generateCredits, labels: labelOverrides, classNames, unstyled, className, style,
 }: SceneStudioProps) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
@@ -143,6 +166,7 @@ export function SceneStudio({
   const [inner, setInner] = useState<ViggleScene | null>(defaultScene ?? null);
   const [shownIndex, setShownIndex] = useState<number | null>(null);
   const scene = controlled !== undefined ? controlled : inner;
+  const gaps = useGaps(viewerRef);
 
   const commit = (next: ViggleScene) => {
     setInner(next);
@@ -166,8 +190,11 @@ export function SceneStudio({
   // A new version (or a new scene) puts the view back on the newest.
   const count = scene?.versions.length ?? 0;
   useEffect(() => { setShownIndex(null); }, [scene?.sessionId, count]);
+  // The gaps were measured on the version before: a fill or another scene makes them stale.
+  const resetGaps = gaps.reset;
+  useEffect(() => { resetGaps(); }, [resetGaps, scene?.sessionId, count]);
 
-  const busy = gen.busy || expand.busy || rebuild.busy;
+  const busy = gen.busy || expand.busy || rebuild.busy || gaps.searching;
   const running = gen.busy ? gen : expand.busy ? expand : rebuild.busy ? rebuild : null;
   const elapsed = useElapsed(running?.startedAt ?? null);
 
@@ -195,6 +222,17 @@ export function SceneStudio({
     const pose = v?.getPose();
     if (v && pose) void expand.expand(pose, { fov: v.fov });
   };
+  /** Find the gaps and fly to the worst; nothing is spent. */
+  const doFindGaps = () => void gaps.search();
+  /** The worst gap (searching first if need be), flown to and filled. */
+  const doAutoFill = async () => {
+    const v = viewerRef.current;
+    const found = gaps.list ?? await gaps.search();
+    const gap = found?.[gaps.index] ?? found?.[0];
+    if (!v || !gap) return;
+    await v.flyTo(gap.pose);
+    void expand.expand(gap.pose, { fov: v.fov });
+  };
 
   const head = count - 1;
   const showing = shownIndex ?? head;
@@ -216,7 +254,8 @@ export function SceneStudio({
   };
 
   const errorText = error instanceof SceneApiError && error.status === 409 ? labels.busySession : error?.message;
-  const statusText = gen.busy ? labels.generating : expand.busy ? labels.expanding : rebuild.busy ? labels.rebuilding : null;
+  const statusText = gen.busy ? labels.generating : expand.busy ? labels.expanding : rebuild.busy ? labels.rebuilding
+    : gaps.searching ? `${labels.findingGaps}${gaps.progress ? ` ${gaps.progress.measured}/${gaps.progress.total}` : ''}` : null;
   const expandDisabled = busy || sceneLoading || showing !== head;
 
   /** Props for one part: its class, its data attribute, and the built-in style unless `unstyled`. */
@@ -280,6 +319,32 @@ export function SceneStudio({
         {scene && (
           <div style={layout.actions}>
           {toolbar && scene.versions[showing] && toolbar({ scene, version: scene.versions[showing]!, versionIndex: showing, busy })}
+          {!hideGaps && (
+            <>
+              <button
+                type="button"
+                {...part('gapsButton', css.secondary, layout.expand, expandDisabled ? css.disabled : null)}
+                data-busy={gaps.searching || void 0}
+                disabled={expandDisabled}
+                title={labels.findGapsHint}
+                onClick={doFindGaps}
+              >
+                <span aria-hidden>⌖</span>
+                <span>{labels.findGaps}</span>
+              </button>
+              <button
+                type="button"
+                {...part('autoFillButton', css.secondary, layout.expand, expandDisabled || gaps.list?.length === 0 ? css.disabled : null)}
+                disabled={expandDisabled || gaps.list?.length === 0}
+                title={labels.autoFillHint}
+                onClick={() => void doAutoFill()}
+              >
+                <span aria-hidden>✦</span>
+                <span>{labels.autoFill}</span>
+                {expandCredits != null && <span {...part('cost', css.cost)}>{expandCredits} cr</span>}
+              </button>
+            </>
+          )}
           <button
             type="button"
             {...part('expand', css.expand, layout.expand, expandDisabled ? css.disabled : null)}
@@ -292,6 +357,21 @@ export function SceneStudio({
             <span>{expand.busy ? labels.expanding : labels.expand}</span>
             {!expand.busy && expandCredits != null && <span {...part('cost', css.cost)}>{expandCredits} cr</span>}
           </button>
+          </div>
+        )}
+
+        {/* The gaps found, one at a time: step through them, Fill view fills the one on screen. */}
+        {!hideGaps && gaps.list && !gaps.searching && (
+          <div {...part('gaps', css.pill, layout.gaps)} role="status">
+            {gaps.list.length === 0 ? labels.noGaps : (
+              <>
+                <button type="button" style={css.arrow} aria-label={labels.previousGap} disabled={busy} onClick={() => gaps.go(-1)}>‹</button>
+                <span>
+                  {labels.gap} {gaps.index + 1}/{gaps.list.length} · {Math.round(gaps.list[gaps.index]!.holeFraction * 100)}% {labels.empty}
+                </span>
+                <button type="button" style={css.arrow} aria-label={labels.nextGap} disabled={busy} onClick={() => gaps.go(1)}>›</button>
+              </>
+            )}
           </div>
         )}
 
@@ -411,6 +491,50 @@ function useReferenceImages() {
   };
 }
 
+/** The gap search: what it found, which one is on screen, and stepping between them (each a glide). */
+function useGaps(viewerRef: { current: SceneViewerHandle | null }) {
+  const [list, setList] = useState<SceneGap[] | null>(null);
+  const [index, setIndex] = useState(0);
+  const [searching, setSearching] = useState(false);
+  const [progress, setProgress] = useState<{ measured: number; total: number } | null>(null);
+  const ticket = useRef(0);
+  const reset = useCallback(() => {
+    ticket.current++;
+    setList(null);
+    setIndex(0);
+    setSearching(false);
+    setProgress(null);
+  }, []);
+  const search = async (): Promise<SceneGap[] | null> => {
+    const v = viewerRef.current;
+    if (!v) return null;
+    const mine = ++ticket.current;
+    setSearching(true);
+    setProgress(null);
+    try {
+      const found = await v.findGaps({ onProgress: (p) => mine === ticket.current && setProgress(p) });
+      if (mine !== ticket.current) return null;
+      setList(found);
+      setIndex(0);
+      if (found[0]) void v.flyTo(found[0].pose);
+      return found;
+    } catch {
+      // A scene that changed under the search: there is nothing to show for it.
+      if (mine === ticket.current) setList(null);
+      return null;
+    } finally {
+      if (mine === ticket.current) setSearching(false);
+    }
+  };
+  const go = (step: number) => {
+    if (!list?.length) return;
+    const next = (index + step + list.length) % list.length;
+    setIndex(next);
+    void viewerRef.current?.flyTo(list[next]!.pose);
+  };
+  return { list, index, searching, progress, search, go, reset };
+}
+
 /** `m:ss` since `since`, ticking once a second while set. */
 function useElapsed(since: number | null): string {
   const [now, setNow] = useState(() => Date.now());
@@ -435,7 +559,8 @@ const layout = {
   step: { display: 'flex', alignItems: 'center', gap: 8, flex: 1, textAlign: 'left' },
   actions: { position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 'calc(100% - 180px)' },
   expand: { display: 'flex', alignItems: 'center', gap: 8 },
-  status: { position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 },
+  gaps: { position: 'absolute', top: 60, right: 12, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
+  status: { position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 },
   error: (prompt: boolean): CSSProperties => ({ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: prompt ? 132 : 16, maxWidth: 'calc(100% - 32px)' }),
   dock: {
     position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', width: 'min(760px, calc(100% - 24px))',
@@ -479,6 +604,8 @@ const css = {
   now: { opacity: 0.6, fontWeight: 400 },
   remove: { ...bare, padding: '4px 8px', borderRadius: 6, fontSize: 12, color: v('danger', '#ff8f8f') },
   expand: { ...glass, padding: '9px 14px', cursor: 'pointer', background: accent, border: '1px solid transparent', color: '#fff', fontWeight: 600 },
+  secondary: { ...glass, padding: '9px 14px', cursor: 'pointer', fontWeight: 600 },
+  arrow: { ...bare, padding: '0 6px', fontSize: 16, lineHeight: 1 },
   cost: { opacity: 0.8, fontSize: 11, fontWeight: 500, padding: '1px 6px', borderRadius: 999, background: 'rgba(255, 255, 255, 0.16)' },
   pill: { ...glass, padding: '7px 14px', borderRadius: 999 },
   spinner: { width: 10, height: 10, borderRadius: '50%', border: `2px solid ${accent}`, borderRightColor: 'transparent', animation: 'viggle-scene-spin 0.8s linear infinite' },

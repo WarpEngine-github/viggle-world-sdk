@@ -70,6 +70,7 @@ export function App() {
 - 底部居中的悬浮输入栏：写描述后点 Generate（创建场景）；Images 选参考图（最多 8 张，有缩略图可删除，跟描述一起提交）；Panorama 用全景图创建场景。窄屏时输入框单独占一行
 - 自由飞行的场景画布：拖动转视角，WASD/QE 移动，滚轮推近
 - 右上角 Fill view（生成场景视图，按当前视角补全）
+- 右上角 Find gaps 和 Auto fill：自动找出场景里的漏洞并补图，见下面的「自动找漏洞、补图」
 - 左侧的版本时间线：每一步一行，点一下切到那个版本；选中某一步扩展时，行内出现 Remove（重建场景时去掉这一步）
 
 默认配色是深色毛玻璃加紫色强调色（`#7c5cff`），可以用下面的方式改成你自己的风格。
@@ -86,6 +87,30 @@ export function App() {
 />
 ```
 
+### 自动找漏洞、补图
+
+全景重建只有拍摄点能看到的内容。离开拍摄点走几步，被东西挡住的地方（柱子后面的地面、沙发后面的墙）就没有 splat，会显示成空洞。从那些位置生成视图，补的正好是缺的内容。
+
+- **Find gaps**（免费，不扣额度）：在拍摄点四周、房间以内摆一圈候选相机，看向场景中间。每个相机都在屏幕外渲染一次，算出画面里没被任何 splat 覆盖的比例（累积 alpha < 0.5 算空）。然后按空洞从多到少排序，相机平滑飞到最严重的那个视角。右上角会显示「Gap 1/3 · 11% empty」，用 ‹ › 切换下一个漏洞，这时点 Fill view 就按这个视角补图。
+- **Auto fill**（扣一次扩展的额度）：找到最严重的漏洞，相机飞过去，然后直接从这个视角生成补图。如果已经点过 Find gaps，就补当前选中的那个漏洞。
+
+两个按钮都只对最新版本生效。补完会产生新版本，之前找到的漏洞会自动清空，可以再点 Find gaps 看还剩哪些。不想要这两个按钮时传 `hideGaps`。
+
+不用 `<SceneStudio>` 时，`SceneViewerHandle` 和 `SceneRenderer` 上有同样的能力：
+
+```ts
+const gaps = await viewer.findGaps({ onProgress: ({ measured, total }) => {} });  // 免费，按空洞从多到少
+if (gaps[0]) {
+  await viewer.flyTo(gaps[0].pose);                        // 相机平滑飞过去
+  await expand.expand(gaps[0].pose, { fov: viewer.fov });  // 从这个视角补图（扣额度）
+}
+const empty = await viewer.measureView();                  // 当前视角有多少比例是空的，0..1
+```
+
+`findGaps` 的选项：`directions`（一圈几个方向，默认 12）、`radii`（离拍摄点几倍拍摄高度，默认 `[0.75, 1.5]`）、`minHoleFraction`（空洞少于多少不算，默认 0.01）、`maxGaps`（最多几个，默认 5）、`previews: true`（每个漏洞附带一张 JPEG 预览图，漏洞部分是黑色）、`signal`（中途取消）。返回的 `pose` 和 `getPose()` 是同一个坐标系，可以直接传给 `expand` 或 `client.expandScene`，也可以序列化后交给 MCP / 后端。
+
+说明：这个指标只能发现「空」，发现不了「糊」。比如离远处的表面太近时，几个很大的 splat 把画面盖满了，空洞比例是 0，但看起来是糊的。
+
 ### 参考图
 
 - **用户自己选**：点输入栏的 Images 按钮选参考图，生成成功后会自动清空。如果不想让用户选，传 `hideReferences` 隐藏这个按钮。
@@ -99,7 +124,7 @@ export function App() {
 从改动最小到最大有三种方式：
 
 1. **CSS 变量**：设置在任意祖先元素上：`--viggle-scene-bg`、`-surface`、`-text`、`-border`、`-accent`、`-danger`、`-radius`、`-font`
-2. **`classNames`**：按部件传 class（适合 Tailwind 或 CSS Modules），部件有 `root`、`versions`、`versionButton`、`expand`、`status`、`error`、`promptBar`、`input`、`referencesButton`、`references`、`referenceThumb`、`referenceRemove`、`panoramaButton`、`generateButton` 等
+2. **`classNames`**：按部件传 class（适合 Tailwind 或 CSS Modules），部件有 `root`、`versions`、`versionButton`、`expand`、`gapsButton`、`autoFillButton`、`gaps`、`status`、`error`、`promptBar`、`input`、`referencesButton`、`references`、`referenceThumb`、`referenceRemove`、`panoramaButton`、`generateButton` 等
 3. **`unstyled`**：去掉内置外观，只保留定位。每个部件都带有 `data-viggle-part="…"` 属性，可以直接用 CSS 选择
 
 文案通过 `labels` 覆盖，包括中文在内都可以。
@@ -147,6 +172,13 @@ let scene = await client.generateScene({ prompt: 'a cozy cabin', quality: 'low' 
 const renderer = await SceneRenderer.create(canvas);
 await renderer.load([scene.versions.at(-1)!.splatUrl]);
 scene = await client.expandScene(scene, renderer.getPose()!, { fov: renderer.fov });
+
+// 自动找漏洞，飞过去，从那里补图
+const [gap] = await renderer.findGaps();
+if (gap) {
+  await renderer.flyTo(gap.pose);
+  scene = await client.expandScene(scene, gap.pose, { fov: renderer.fov });
+}
 ```
 
 ## 角色漫游
