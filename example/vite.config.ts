@@ -1,4 +1,3 @@
-import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
 
@@ -32,9 +31,9 @@ export default defineConfig(({ mode }) => {
     define: { __VIGGLE_LIVE__: JSON.stringify(Boolean(key) && env.VIGGLE_MOCK !== '1') },
     server: {
       port: 5191,
-      // The splat engine is linked in from ../P.I.N.O.C./engine, outside this
-      // package; its decoder workers are requested as source files from there.
-      fs: { allow: [searchForWorkspaceRoot(root), realpathSync(new URL('../node_modules/@viggle/splat-engine', import.meta.url))] },
+      // The splat engine is the workspace package in packages/engine; its decoder
+      // workers are requested as source files from there.
+      fs: { allow: [searchForWorkspaceRoot(root)] },
       proxy: key
         ? {
             '/viggle-api': {

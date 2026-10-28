@@ -1,0 +1,198 @@
+diff --git a/build/playcanvas/src/core/math/color.js b/build/playcanvas/src/core/math/color.js
+index 19b9aa4624ca366feacfb33d197dcab642f98c52..45b79b259787fc2888ad449e4efe74ef7766ef82 100644
+--- a/build/playcanvas/src/core/math/color.js
++++ b/build/playcanvas/src/core/math/color.js
+@@ -1,9 +1,5 @@
+ import { math } from "./math.js";
+ class Color {
+-	r;
+-	g;
+-	b;
+-	a;
+ 	constructor(r = 0, g = 0, b = 0, a = 1) {
+ 		const length = r.length;
+ 		if (length === 3 || length === 4) {
+diff --git a/build/playcanvas/src/core/math/quat.js b/build/playcanvas/src/core/math/quat.js
+index 2b2afa5f31ad7453ad657a9e23a442c3293d52d4..763e3c051f928f756f6750c37fdeb27aa5569b55 100644
+--- a/build/playcanvas/src/core/math/quat.js
++++ b/build/playcanvas/src/core/math/quat.js
+@@ -1,10 +1,6 @@
+ import { math } from "./math.js";
+ import { Vec3 } from "./vec3.js";
+ class Quat {
+-	x;
+-	y;
+-	z;
+-	w;
+ 	constructor(x = 0, y = 0, z = 0, w = 1) {
+ 		if (x.length === 4) {
+ 			this.x = x[0];
+diff --git a/build/playcanvas/src/core/math/vec2.js b/build/playcanvas/src/core/math/vec2.js
+index 942366b62600bb30587e808f8dd31d84d3d0daba..5ef0c43655beeb263a47daf68d82b9d023fca5a0 100644
+--- a/build/playcanvas/src/core/math/vec2.js
++++ b/build/playcanvas/src/core/math/vec2.js
+@@ -1,7 +1,5 @@
+ import { math } from "./math.js";
+ class Vec2 {
+-	x;
+-	y;
+ 	constructor(x = 0, y = 0) {
+ 		if (x.length === 2) {
+ 			this.x = x[0];
+diff --git a/build/playcanvas/src/core/math/vec3.js b/build/playcanvas/src/core/math/vec3.js
+index 57555fc517aea094f8ecc20d3ada253371209b86..99a2ecfc24e3e669b3a8ce71937d16782ae4449d 100644
+--- a/build/playcanvas/src/core/math/vec3.js
++++ b/build/playcanvas/src/core/math/vec3.js
+@@ -1,7 +1,4 @@
+ class Vec3 {
+-	x;
+-	y;
+-	z;
+ 	constructor(x = 0, y = 0, z = 0) {
+ 		if (x.length === 3) {
+ 			this.x = x[0];
+diff --git a/build/playcanvas/src/core/math/vec4.js b/build/playcanvas/src/core/math/vec4.js
+index 2edc0f3223bc590eae29e160e30da3dcb20c46e6..c67195f15d81de9caffac571aa43dfc631846425 100644
+--- a/build/playcanvas/src/core/math/vec4.js
++++ b/build/playcanvas/src/core/math/vec4.js
+@@ -1,8 +1,4 @@
+ class Vec4 {
+-	x;
+-	y;
+-	z;
+-	w;
+ 	constructor(x = 0, y = 0, z = 0, w = 0) {
+ 		if (x.length === 4) {
+ 			this.x = x[0];
+diff --git a/build/playcanvas.dbg/src/core/math/color.js b/build/playcanvas.dbg/src/core/math/color.js
+index 528925d78959ee6374c1352dc3985d8b637f3046..041b16ac22d1ff0f92b1c23356a001d064d629e8 100644
+--- a/build/playcanvas.dbg/src/core/math/color.js
++++ b/build/playcanvas.dbg/src/core/math/color.js
+@@ -36,25 +36,21 @@ const _Color = class _Color {
+      *
+      * @type {number}
+      */
+-    __publicField(this, "r");
+     /**
+      * The green component of the color.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "g");
+     /**
+      * The blue component of the color.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "b");
+     /**
+      * The alpha component of the color.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "a");
+     const length = r.length;
+     if (length === 3 || length === 4) {
+       this.r = r[0];
+diff --git a/build/playcanvas.dbg/src/core/math/quat.js b/build/playcanvas.dbg/src/core/math/quat.js
+index 8454b35c272b01de1d0ffa8804bbebd7cc6da7f3..c07a66f1dd5918df916eba89a2ac7fb74b278efb 100644
+--- a/build/playcanvas.dbg/src/core/math/quat.js
++++ b/build/playcanvas.dbg/src/core/math/quat.js
+@@ -37,25 +37,21 @@ const _Quat = class _Quat {
+      *
+      * @type {number}
+      */
+-    __publicField(this, "x");
+     /**
+      * The y component of the quaternion.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "y");
+     /**
+      * The z component of the quaternion.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "z");
+     /**
+      * The w component of the quaternion.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "w");
+     if (x.length === 4) {
+       this.x = x[0];
+       this.y = x[1];
+diff --git a/build/playcanvas.dbg/src/core/math/vec2.js b/build/playcanvas.dbg/src/core/math/vec2.js
+index ca9a09df8b978d997afea78d43f54fa24a460a33..765acc86ae48ad1433468d7dd5a209406ae651a8 100644
+--- a/build/playcanvas.dbg/src/core/math/vec2.js
++++ b/build/playcanvas.dbg/src/core/math/vec2.js
+@@ -33,13 +33,11 @@ const _Vec2 = class _Vec2 {
+      *
+      * @type {number}
+      */
+-    __publicField(this, "x");
+     /**
+      * The second component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "y");
+     if (x.length === 2) {
+       this.x = x[0];
+       this.y = x[1];
+diff --git a/build/playcanvas.dbg/src/core/math/vec3.js b/build/playcanvas.dbg/src/core/math/vec3.js
+index bae9d69f334002bf430bc9d1a5f53206d131889f..85bb9ced6f4ae1b5416a25439dbc1f21a24882b8 100644
+--- a/build/playcanvas.dbg/src/core/math/vec3.js
++++ b/build/playcanvas.dbg/src/core/math/vec3.js
+@@ -34,19 +34,16 @@ const _Vec3 = class _Vec3 {
+      *
+      * @type {number}
+      */
+-    __publicField(this, "x");
+     /**
+      * The second component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "y");
+     /**
+      * The third component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "z");
+     if (x.length === 3) {
+       this.x = x[0];
+       this.y = x[1];
+diff --git a/build/playcanvas.dbg/src/core/math/vec4.js b/build/playcanvas.dbg/src/core/math/vec4.js
+index c77f35c9ebc3eece4545b02168a156c8e07e8b73..c0ddeef607ba9a8545d25efff0044111a0cc93a6 100644
+--- a/build/playcanvas.dbg/src/core/math/vec4.js
++++ b/build/playcanvas.dbg/src/core/math/vec4.js
+@@ -36,25 +36,21 @@ const _Vec4 = class _Vec4 {
+      *
+      * @type {number}
+      */
+-    __publicField(this, "x");
+     /**
+      * The second component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "y");
+     /**
+      * The third component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "z");
+     /**
+      * The fourth component of the vector.
+      *
+      * @type {number}
+      */
+-    __publicField(this, "w");
+     if (x.length === 4) {
+       this.x = x[0];
+       this.y = x[1];

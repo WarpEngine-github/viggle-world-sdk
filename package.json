@@ -83,7 +83,7 @@
     "build": "vite build && vite build --mode cjs && tsc -p tsconfig.build.json && node build/cjs-types.mjs && node build/prune-types.mjs",
     "build:release": "VIGGLE_RELEASE=1 pnpm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test": "tsx --test \"src/**/*.test.ts\" \"packages/engine/src/**/*.test.ts\"",
     "example": "vite --config example/vite.config.ts"
   },
   "peerDependencies": {
@@ -98,7 +98,7 @@
     "@types/node": "^24.12.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@viggle/splat-engine": "link:../P.I.N.O.C./engine",
+    "@viggle/splat-engine": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tsx": "4.23.15",

@@ -1,5 +1,11 @@
-# Settings only - this is a single package, not a workspace of several.
-# Same choice as P.I.N.O.C.: esbuild runs from its prebuilt platform package,
-# so its install script is not needed.
+packages:
+  - 'packages/*'
+# esbuild runs from its prebuilt platform package, so its install script is not needed.
 allowBuilds:
   esbuild: false
+# One PlayCanvas in the bundle: spz-js imports its maths classes too.
+overrides:
+  playcanvas: 2.23.3
+# The engine renders with a patched PlayCanvas.
+patchedDependencies:
+  playcanvas@2.23.3: patches/playcanvas@2.23.3.patch

@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  playcanvas: 2.23.3
+
+patchedDependencies:
+  playcanvas@2.23.3: 0392b532c7f254f3c79323de3b4c6abdda9fc45864b96fe61f3e0c5675d8cb2f
+
 importers:
 
   .:
@@ -18,8 +24,8 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
       '@viggle/splat-engine':
-        specifier: link:../P.I.N.O.C./engine
-        version: link:../P.I.N.O.C./engine
+        specifier: workspace:*
+        version: link:packages/engine
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -35,6 +41,22 @@ importers:
       vite:
         specifier: ^8.3.4
         version: 8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)
+
+  packages/engine:
+    dependencies:
+      playcanvas:
+        specifier: 2.23.3
+        version: 2.23.3(patch_hash=0392b532c7f254f3c79323de3b4c6abdda9fc45864b96fe61f3e0c5675d8cb2f)
+      spz-js:
+        specifier: 1.2.5
+        version: 1.2.5
+      zstddec:
+        specifier: 0.3.4
+        version: 0.3.4
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
 
 packages:
 
@@ -307,6 +329,12 @@ packages:
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
+  '@types/webxr@0.5.24':
+    resolution: {integrity: sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==}
+
+  '@webgpu/types@0.1.74':
+    resolution: {integrity: sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==}
+
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -419,6 +447,10 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playcanvas@2.23.3:
+    resolution: {integrity: sha512-hjDdo5yFtVr/WmDh59pRrT1LC+Rfpq4VXB8Xt3AMB8GfWXj9JzOMq3x+3FTmq/2L2gN37q9V1LMZaLuYshzMXQ==}
+    engines: {node: '>=18.3.0'}
+
   postcss@8.5.31:
     resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
     engines: {node: ^10 || ^12 || >=14}
@@ -444,6 +476,9 @@ packages:
     resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
     engines: {node: '>=0.10.0'}
 
+  spz-js@1.2.5:
+    resolution: {integrity: sha512-BwQhDTl7m0EgkcY413ynDet890fNg5Vw0156SCvkL1GYIBS8yMlRJXM9f4RMMmZG14Ha3K0TEWo0kFJMu00ylA==}
+
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
@@ -455,6 +490,11 @@ packages:
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -503,6 +543,9 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  zstddec@0.3.4:
+    resolution: {integrity: sha512-3Y/NMP6MNdp9b0fWhjCUGiybog7RC3EbUSIJLWnfjylOvnbuGykeu4zYUuH4IRLy5xI7NytXTHN3CWQKIN3cSg==}
 
 snapshots:
 
@@ -645,6 +688,10 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
+  '@types/webxr@0.5.24': {}
+
+  '@webgpu/types@0.1.74': {}
+
   csstype@3.2.3: {}
 
   detect-libc@2.1.2: {}
@@ -740,6 +787,11 @@ snapshots:
 
   picomatch@4.0.7: {}
 
+  playcanvas@2.23.3(patch_hash=0392b532c7f254f3c79323de3b4c6abdda9fc45864b96fe61f3e0c5675d8cb2f):
+    dependencies:
+      '@types/webxr': 0.5.24
+      '@webgpu/types': 0.1.74
+
   postcss@8.5.31:
     dependencies:
       nanoid: 3.3.20
@@ -778,6 +830,10 @@ snapshots:
 
   source-map-js@1.2.2: {}
 
+  spz-js@1.2.5:
+    dependencies:
+      playcanvas: 2.23.3(patch_hash=0392b532c7f254f3c79323de3b4c6abdda9fc45864b96fe61f3e0c5675d8cb2f)
+
   tinyglobby@0.2.17:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
@@ -790,6 +846,8 @@ snapshots:
       fsevents: 2.3.3
 
   typescript@5.9.3: {}
+
+  typescript@6.0.3: {}
 
   undici-types@7.24.6: {}
 
@@ -805,3 +863,5 @@ snapshots:
       esbuild: 0.28.2
       fsevents: 2.3.3
       tsx: 4.23.15
+
+  zstddec@0.3.4: {}

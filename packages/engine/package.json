@@ -1,0 +1,19 @@
+{
+  "name": "@viggle/splat-engine",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "main": "src/index.ts",
+  "dependencies": {
+    "playcanvas": "2.23.3",
+    "spz-js": "1.2.5",
+    "zstddec": "0.3.4"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  }
+}
