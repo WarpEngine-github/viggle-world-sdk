@@ -1,5 +1,7 @@
 # @viggle/scene-sdk
 
+中文 | [English](README.en.md)
+
 Viggle Scene API（`https://apis.viggle.ai`）的 TypeScript SDK，支持以下操作：
 
 - **初始场景生成**：用一句描述（可附参考图）或一张全景图生成 Gaussian Splat 3D 场景

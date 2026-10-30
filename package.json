@@ -19,7 +19,8 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
